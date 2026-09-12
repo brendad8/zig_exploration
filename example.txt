@@ -1,0 +1,9 @@
+The quick brown fox jumps over the lazy dog.
+This sentence contains every letter of the alphabet.
+
+Word counting is a useful programming exercise.
+A word counter reads a text file and counts the words inside it.
+You can use this example to test your program.
+
+Some words appear more than once.
+Words words words can help test repeated word counting.
