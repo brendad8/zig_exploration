@@ -1,6 +1,6 @@
 
 const std = @import("std");
-const lex = @import("lexer.zig");
+const lexer = @import("lexer.zig");
 
 pub fn main(init: std.process.Init) !void
 {
@@ -10,11 +10,11 @@ pub fn main(init: std.process.Init) !void
     const input = try std.Io.Dir.cwd().readFileAlloc(io, "input.c", gpa, .unlimited);
     defer gpa.free(input);
 
-    var lexer = lex.init(input);
+    var lex = lexer.init(input);
 
-    while (lexer.hasTokens())
+    while (lex.hasTokens())
     {
-        const token = lexer.nextToken();
+        const token = lex.nextToken();
         std.debug.print("{any}\n", .{token});
     }
 }
