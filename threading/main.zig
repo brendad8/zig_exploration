@@ -1,5 +1,6 @@
 
 const std = @import("std");
+const range = @import("range.zig");
 
 const num_threads = 2;
 
@@ -40,36 +41,48 @@ pub fn main(init: std.process.Init) !void
 
 fn threadEntry(io: std.Io, file: std.Io.File, file_size: u64, idx: u64) !void
 {
-    const range = getRange(file_size, num_threads, idx);
-    std.debug.print("range = {}\n", .{range});
+    const rng: range.Range(u64) = .getParitionFromIdx(file_size, num_threads, idx);
+    std.debug.print("rng = {}\n", .{rng});
 
     var read_buffer: [256]u8 = undefined;
     var file_reader = file.reader(io, &read_buffer);
-    try file_reader.seekTo(range.begin);
+    try file_reader.seekTo(rng.begin);
 
-    const reader = &file_reader.interface;
-
-    while (try reader.takeDelimiter('\n')) |line| 
-    {
-        std.debug.print("thread {d}: {s}\n", .{idx, line});
-    }
+    // const reader = &file_reader.interface;
+    // if (idx != 0)
+    // {
+    //     while (true) 
+    //     {
+    //         const c = reader.peekByte() catch break;
+    //         if (!isDelimiter(c)) break;
+    //         _ = try reader.takeByte();
+    //     }
+    // }
+    //
+    // // std.debug.print("thread {d} pos = {}\n", .{idx, file_reader.logicalPos()});
+    //
+    // while (try takeUntilDelimiter(reader)) |word| 
+    // {
+    //     std.debug.print("thread {d}: {s}\n", .{idx, word});
+    //     if (file_reader.logicalPos() > rng.end) break;
+    // }
 }
 
-const Range = struct
+fn isDelimiter(c: u8) bool
 {
-    begin: u64,
-    end: u64
-};
+    return c == ' ' or c == '\n' or c == '\t' or c == '.';
+}
 
-fn getRange(size: u64, num_partitions: u64, idx: u64) Range {
-    std.debug.assert(num_partitions > 0);
-    std.debug.assert(idx < num_partitions);
-
-    const base = size / num_partitions;
-    const remainder = size % num_partitions;
-
-    const begin = idx * base + @min(idx, remainder);
-    const end = begin + base + @intFromBool(idx < remainder);
-
-    return .{ .begin = begin, .end = end, };
+fn takeUntilDelimiter(reader: *std.Io.Reader) !?[]u8
+{
+    
+    var len: usize = 0; 
+    while (true) : (len += 1)
+    {
+        const c = reader.peekByte() catch break;
+        if (isDelimiter(c)) break;
+    }
+    const result: ?[]u8 = reader.take(len) catch null;
+    _ = reader.take(1) catch {}; // move past delimiter
+    return result;
 }
