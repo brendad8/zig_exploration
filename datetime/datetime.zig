@@ -19,6 +19,16 @@ const DayOfWeek = enum(u8)
     saturday,
 };
 
+const Duration = struct
+{
+    days:  i64 = 0,
+    hours: i64 = 0,
+    mins:  i64 = 0,
+    secs:  i64 = 0,
+    msecs: i64 = 0,
+    usecs: i64 = 0,
+};
+
 const DenseTime = i64; // micro seconds since 0001-01-01 00:00:00.000
                        
 const DateTime = struct
@@ -112,14 +122,14 @@ const DateTime = struct
         return result;
     }
 
-    fn nowUtc(io: std.Io) DateTime
+    pub fn nowUtc(io: std.Io) DateTime
     {
         const us_since_epoch = std.Io.Clock.now(.real, io).toMicroseconds();
         const now: DenseTime = unix_epoch_dense + us_since_epoch;
         return DateTime.fromDense(now);
     }
 
-    fn nowLocal() DateTime
+    pub fn nowLocal() DateTime
     {
         if (builtin.os.tag == .windows)
         {
@@ -142,6 +152,18 @@ const DateTime = struct
                 .usec  = @as(u16, @intCast(@mod(tv.tv_usec, 1000))),
             };
         }
+    }
+
+    pub fn addDuration(self: Self, duration: Duration)
+    {
+        var dense = self.toDense();
+        dense += duration.days * time.us_per_day;
+        dense += duration.hours * time.us_per_hour;
+        dense += duration.mins * time.us_per_min;
+        dense += duration.secs * time.us_per_s;
+        dense += duration.msecs * time.us_per_ms;
+        dense += duration.usecs;
+        return DateTime.fromDense(dense);
     }
 
 
@@ -206,6 +228,7 @@ const days_before_month: [2][12]i64 = .{
 
 const days_per_400_years = 146097;
 
+
 pub fn main(init: std.process.Init) void
 {
     const today: DateTime = .{
@@ -213,7 +236,6 @@ pub fn main(init: std.process.Init) void
         .month = 9,
         .day = 21
     };
-
     std.debug.print("today = {any}\n", .{today});
     const today_dense = today.toDense();
     const today2: DateTime = .fromDense(today_dense);
