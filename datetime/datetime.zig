@@ -1,6 +1,23 @@
 
+const builtin = @import("builtin");
 const std = @import("std");
 const time = std.time;
+
+const c = @cImport({
+    @cInclude("sys/time.h");
+    @cInclude("time.h");
+});
+
+const DayOfWeek = enum(u8)
+{
+    sunday,
+    monday,
+    tuesday,
+    wednesday,
+    thursday,
+    friday,
+    saturday,
+};
 
 const DenseTime = i64; // micro seconds since 0001-01-01 00:00:00.000
                        
@@ -101,6 +118,40 @@ const DateTime = struct
         const now: DenseTime = unix_epoch_dense + us_since_epoch;
         return DateTime.fromDense(now);
     }
+
+    fn nowLocal() DateTime
+    {
+        if (builtin.os.tag == .windows)
+        {
+        }
+        else
+        {
+            var tv: c.struct_timeval = undefined;
+            _ = c.gettimeofday(&tv, null);
+            const t: c.time_t = tv.tv_sec;
+            var tm_local: c.struct_tm = undefined;
+            _ = c.localtime_r(&t, &tm_local);
+            return .{
+                .year  = @as(u16, @intCast(tm_local.tm_year)) + 1900,
+                .month = @as(u16, @intCast(tm_local.tm_mon)) + 1,
+                .day   = @as(u16, @intCast(tm_local.tm_mday)),
+                .hour  = @as(u16, @intCast(tm_local.tm_hour)),
+                .min   = @as(u16, @intCast(tm_local.tm_min)),
+                .sec   = @as(u16, @intCast(tm_local.tm_sec)),
+                .msec  = @as(u16, @intCast(@divTrunc(tv.tv_usec, 1000))),
+                .usec  = @as(u16, @intCast(@mod(tv.tv_usec, 1000))),
+            };
+        }
+    }
+
+
+    pub fn getDayOfWeek(self: Self) DayOfWeek
+    {
+        const dense = self.toDense();
+        const days: i64 = @divTrunc(dense, time.us_per_day);
+        const dow: DayOfWeek = @enumFromInt(@mod((days + 1), 7));
+        return dow;
+    }
 };
 
 fn isLeapYear(year: u16) bool 
@@ -168,7 +219,10 @@ pub fn main(init: std.process.Init) void
     const today2: DateTime = .fromDense(today_dense);
     std.debug.print("today2 = {any}\n", .{today2});
     
-    const now: DateTime = .nowUtc(init.io);
-    std.debug.print("now = {any}\n", .{now});
+    const now_utc: DateTime = .nowUtc(init.io);
+    std.debug.print("now = {any}\n", .{now_utc});
+    
+    const now_local: DateTime = .nowLocal();
+    std.debug.print("now = {any}\n", .{now_local});
 
 }
